@@ -8,9 +8,7 @@ Just provide the app name as seen in the menubar and a mapping from and to new k
 
 ### Installation
 
-**Download:** [AppBindings.zip](Spoons/AppBindings.spoon.zip)
-
-**Open:** Unzip and open `AppBindings.spoon`. It should auto-install the spoon.
+Clone into your `~/.hammerspoon/Spoons/` directory
 
 **Configure:** Add to your `init.lua`
 
