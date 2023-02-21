@@ -1,77 +1,91 @@
-local obj = {}
-obj.__index = obj
+local AppBindings = {}
 
 -- Metadata
-obj.name = "AppBindings"
-obj.version = "1.0"
-obj.author = "Justin Wyne <justinwyne@gmail.com>"
-obj.homepage = "https://github.com/wyne/awesome-hammerspoon"
-obj.license = "MIT - https://opensource.org/licenses/MIT"
+AppBindings.name = "AppBindings"
+AppBindings.version = "1.1"
+AppBindings.author = "Robert Chung <robertchung97@gmail.com>"
+AppBindings.homepage = "https://github.com/robertchung97/remap-keys-spoon"
+AppBindings.license = "MIT - https://opensource.org/licenses/MIT"
 
 local logger = hs.logger.new("AppBindings", "debug")
-obj.logger = logger
+AppBindings.logger = logger
 
-function obj:pressFn(mods, key)
-  if key == nil then
-    key = mods
-    mods = {}
-  end
-
-  return function() hs.eventtap.keyStroke(mods, key, 1000) end
+function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
 end
 
-function obj:appRemap(mods, key, remapMods, remapKey)
-  fn = self:pressFn(remapMods, remapKey)
-  return hs.hotkey.new(mods, key, fn, nil, fn)
+---------------------------
+-- INIT
+---------------------------
+function AppBindings:init()
+    self.__hotkeys = {}
+    self.__inited = true
+    return self
 end
 
-function obj:init()
-  self._init_done = true
-  return self
+
+function AppBindings:pressFn(sequence)
+    return function()
+        for _, sequenceItem in pairs(sequence) do
+            hs.eventtap.event.newKeyEvent(sequenceItem.modifiers, sequenceItem.key, true):post()
+        end
+    end
 end
+
+function AppBindings:appRemap(from, to)
+    local fn = self:pressFn(to.sequence)
+    return hs.hotkey.new(from.modifiers, from.key, fn, nil, fn)
+end
+
+-- Listen to _window_ events and see if the user went out of focus.
+function AppBindings:start()
+    local hotkeys = self.__hotkeys
+
+    hs.window.filter.default:subscribe(hs.window.filter.windowFocused, function(_, appName)
+        for appTitle, hk in pairs(hotkeys) do
+            for _, hotkey in pairs(hk) do
+                if (appName == appTitle) then
+                    hotkey:enable()
+                else
+                    hotkey:disable()
+                end
+            end
+        end
+    end)
+
+    return self
+end
+
 
 -- Translate user input keymap to hs.hotkey functions
-function obj:keymapToHotkeys(keymap)
-  local hotkeys = {}
+function AppBindings:keymapToHotkeys(appTitle, keymaps)
+    for _, val in ipairs(keymaps) do
+        local from = val.from
+        local to = val.to
 
-  for i, item in pairs(keymap) do
-    metaFrom = item[1]
-    keyFrom = item[2]
-    metaTo = item[3]
-    keyTo = item[4]
+        local app = self.__hotkeys[appTitle] or {}
+        table.insert(app, self:appRemap(from, to))
+        self.__hotkeys[appTitle] = app
+    end
 
-    table.insert(hotkeys, self:appRemap(metaFrom, keyFrom, metaTo, keyTo))
-
-    self.logger.d("Mapping " ..
-      tostring(metaFrom) .. tostring(keyFrom) .. " -> " ..
-      tostring(metaTo) .. tostring(keyTo))
-  end
-
-  return hotkeys
+    return self
 end
 
-function obj:bind(appTitle, keymap)
-  self.logger.d("Found binding for app " .. appTitle)
+function AppBindings:bind(appTitle, keymaps)
+    self.logger.d("Found binding for app " .. appTitle)
+    self:keymapToHotkeys(appTitle, keymaps)
 
-  local hotkeys = self:keymapToHotkeys(keymap)
-
-  local function enableKeys()
-    for i, hotkey in pairs(hotkeys) do
-      hotkey:enable()
-    end
-  end
-
-  local function disableKeys()
-    for i, hotkey in pairs(hotkeys) do
-      hotkey:disable()
-    end
-  end
-
-  local appFilter = hs.window.filter
-
-  appFilter.new(appTitle)
-  :subscribe(appFilter.windowFocused, enableKeys)
-  :subscribe(appFilter.windowUnfocused, disableKeys)
+    return self
 end
 
-return obj
+return AppBindings
+

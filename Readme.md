@@ -18,40 +18,29 @@ Just provide the app name as seen in the menubar and a mapping from and to new k
 hs.loadSpoon("AppBindings")
 ```
 
-**Usage**: Replace `App Name` and key maps below.
-
-```lua
-spoon.AppBindings:bind('App Name', {
---  |----FROM----| |------TO------|
---  |meta  ,  key| |meta   ,  key |
-  { {'meta'}, 'a', {'meta'}, 'down' }, -- Description
-})
-```
-
 Example:
 
 ```lua
 -- App Specific Bindings
 
-hs.loadSpoon("AppBindings")
-
-spoon.AppBindings:bind('Telegram', {
-  { {'cmd', 'shift'}, ']', {'alt'}, 'down' }, -- Next chat window
-  { {'cmd', 'shift'}, '[', {'alt'}, 'up' },   -- Prev chat window
-  { {'ctrl'}, 'n', {}, 'pagedown' },          -- Scroll message window
-  { {'ctrl'}, 'p', {}, 'pageup' },            -- Scroll message window
+local bindings = hs.loadSpoon("AppBindings")
+bindings:bind('Alacritty', {
+    {
+        from = { modifiers = {'ctrl'}, key = 'tab'},
+          to = { sequence = {
+                   { modifiers = {'ctrl'}, key = 'b'},
+                   { modifiers = {'ctrl'}, key = 'l'}
+               }}
+    },
+    {
+        from = { modifiers = {'ctrl', 'shift'}, key = 'tab'},
+          to = { sequence = {
+                   { modifiers = {'ctrl'}, key = 'b'},
+                   { modifiers = {'ctrl'}, key = 'h'}
+               }}
+    },
 })
-
-spoon.AppBindings:bind('Notion', {
-  { {'cmd', 'shift'}, ']', {'cmd'}, ']' },
-  { {'cmd', 'shift'}, '[', {'cmd'}, '[' },
-  { {'cmd'}, 'o', {'cmd'}, 'k' },  -- Open search
-})
-
-spoon.AppBindings:bind('Slack', {
-  { {'ctrl'}, 'n', {}, 'pagedown' },  -- Scroll message window
-  { {'ctrl'}, 'p', {}, 'pageup' },    -- Scroll message window
-})
+bindings:start()
 ```
 
 Don't forget to save and reload Hammerspoon configuration.
